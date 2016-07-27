@@ -174,13 +174,13 @@ trait AlgoliaEloquentTrait
                 $index->batchSynonyms($settings['synonyms'], true, true);
             }
 
-            if (count(array_keys($settings)) > 0) {
-                $index->setSettings($settings);
-            }
-
             if ($b && isset($settings['slaves'])) {
                 $b = false;
                 unset($settings['slaves']);
+            }
+
+            if (count(array_keys($settings)) > 0) {
+                $index->setSettings($settings);
             }
         }
 
