@@ -1,49 +1,91 @@
-<!--NO_HTML-->
-# Laravel Algolia Search
-<!--/NO_HTML-->
+# Algolia Search API Client for Laravel
 
-This PHP package integrates the Algolia Search API to the Laravel Eloquent ORM. It's based on the [algoliasearch-client-php](https://github.com/algolia/algoliasearch-client-php) package. PHP 5.5.9+ is supported.
+[Algolia Search](https://www.algolia.com) is a hosted full-text, numerical, and faceted search engine capable of delivering realtime results from the first keystroke.
 
 [![Build Status](https://img.shields.io/travis/algolia/algoliasearch-laravel/master.svg?style=flat)](https://travis-ci.org/algolia/algoliasearch-laravel)
 [![Latest Version](https://img.shields.io/github/release/algolia/algoliasearch-laravel.svg?style=flat)](https://github.com/algolia/algoliasearch-laravel/releases)
 [![License](https://img.shields.io/packagist/l/algolia/algoliasearch-laravel.svg?style=flat)](https://packagist.org/packages/algolia/algoliasearch-laravel)
 
+
+This PHP package integrates the Algolia Search API to the Laravel Eloquent ORM. It's based on the [algoliasearch-client-php](https://github.com/algolia/algoliasearch-client-php) package.
+
 **Note:** If you're using Laravel 4, checkout the [algoliasearch-laravel-4](https://github.com/algolia/algoliasearch-laravel-4) repository.
 
-<!--NO_HTML-->
 
-## Table of Content
 
-1. [Install](#install)
-2. [Configuration](#configuration)
-3. [Quick Start](#quick-start)
-4. [Ranking & Relevance](#ranking--relevance)
-5. [Options](#options)
-6. [Indexing](#indexing)
-7. [Master/Slave](#masterslave)
-8. [Target multiple indexes](#target-multiple-indexes)
 
-<!--/NO_HTML-->
+## API Documentation
 
-## Install
+You can find the full reference on [Algolia's website](https://www.algolia.com/doc/api-client/laravel/).
 
-### Install via composer
+
+## Table of Contents
+
+
+1. **[Install](#install)**
+
+    * [Install via composer](#install-via-composer)
+    * [Service provider](#service-provider)
+    * [Publish vendor](#publish-vendor)
+
+1. **[Quick Start](#quick-start)**
+
+    * [Quick Start](#quick-start)
+    * [Ranking &amp; Relevance](#ranking--relevance)
+    * [Frontend Search (realtime experience)](#frontend-search-realtime-experience)
+    * [Backend Search](#backend-search)
+
+1. **[Options](#options)**
+
+    * [Auto-indexing &amp; Asynchronism](#auto-indexing--asynchronism)
+    * [Custom Index Name](#custom-index-name)
+    * [Per-environment Indexes](#per-environment-indexes)
+    * [Custom `objectID`](#custom-objectid)
+    * [Restrict Indexing to a Subset of Your Data](#restrict-indexing-to-a-subset-of-your-data)
+
+1. **[Relationships](#relationships)**
+
+    * [Relationships](#relationships)
+
+1. **[Indexing](#indexing)**
+
+    * [Manual Indexing](#manual-indexing)
+    * [Manual Removal](#manual-removal)
+    * [Reindexing](#reindexing)
+    * [Clearing an Index](#clearing-an-index)
+
+1. **[Manage indices](#manage-indices)**
+
+    * [Primary/Replica](#primaryreplica)
+    * [Target Multiple Indexes](#target-multiple-indexes)
+
+1. **[Eloquent compatibility](#eloquent-compatibility)**
+
+    * [Eloquent compatibility](#eloquent-compatibility)
+    * [Compatibility](#compatibility)
+
+
+
+
+# Install
+
+
+
+## Install via composer
 Add `algolia/algoliasearch-laravel` to your `composer.json` file:
 
 ```bash
 composer require algolia/algoliasearch-laravel
 ```
 
-### Service provider
+## Service provider
 Add the service provider to `config/app.php` in the `providers` array.
 
 ```php
 AlgoliaSearch\Laravel\AlgoliaServiceProvider::class
 ```
 
-## Configuration
-
-### Publish vendor
+## Publish vendor
 
 Laravel Algolia requires a connection configuration. To get started, you'll need to publish all vendor assets:
 
@@ -55,9 +97,12 @@ You can add the ```--provider="Vinkla\Algolia\AlgoliaServiceProvider"``` option 
 
 This will create a `config/algolia.php` file in your app that you can modify to set your configuration. Also, make sure you check for changes compared to the original config file after an upgrade.
 
-## Quick Start
 
-### Quick Start
+# Quick Start
+
+
+
+## Quick Start
 
 The following code adds search capabilities to your `Contact` model creating a `Contact` index:
 
@@ -89,7 +134,13 @@ class Contact extends Model
 }
 ```
 
-### Ranking & Relevance
+After setting up your model, you need to manually do the initial import of your data. You can do this by calling `reindex` on your model class. Using our previous example, this would be:
+
+```php
+Contact::reindex();
+```
+
+## Ranking & Relevance
 
 We provide many ways to configure your index settings to tune the overall relevancy but the most important ones are the **searchable attributes** and the attributes reflecting the **record popularity**. You can configure them with the following code:
 
@@ -101,7 +152,7 @@ class Contact extends Model
     use AlgoliaEloquentTrait;
 
     public $algoliaSettings = [
-        'attributesToIndex' => [
+        'searchableAttributes' => [
             'id',
             'name',
         ],
@@ -119,11 +170,11 @@ You can propagate (save) the settings to algolia using the `setSetting` method:
 Contact::setSettings();
 ```
 
-##### Synonyms
+#### Synonyms
 
 Synonyms are used to tell the engine about words or expressions that should be considered equal in regard to the textual relevance.
 
-Our [synonyms API](https://www.algolia.com/doc/relevance/synonyms) has been designed to manage as easily as possible a large set of synonyms for an index and its slaves.
+Our [synonyms API](https://www.algolia.com/doc/relevance/synonyms) has been designed to manage as easily as possible a large set of synonyms for an index and its replicas.
 
 You can use the synonyms API by adding a `synonyms` in `$algoliaSettings` class property like this:
 
@@ -152,11 +203,11 @@ You can propagate (save) the settings to algolia using the `setSetting` method:
 Contact::setSettings();
 ```
 
-### Frontend Search (realtime experience)
+## Frontend Search (realtime experience)
 
 Traditional search implementations tend to have search logic and functionality on the backend. This made sense when the search experience consisted of a user entering a search query, executing that search, and then being redirected to a search result page.
 
-Implementing search on the backend is no longer necessary. In fact, in most cases it is harmful to performance because of the extra network and processing latency. We highly recommend the usage of our [JavaScript API Client](https://github.com/algolia/algoliasearch-client-js) issuing all search requests directly from the end user's browser, mobile device, or client. It will reduce the overall search latency while offloading your servers at the same time.
+Implementing search on the backend is no longer necessary. In fact, in most cases it is harmful to performance because of the extra network and processing latency. We highly recommend the usage of our [JavaScript API Client](https://github.com/algolia/algoliasearch-client-javascript) issuing all search requests directly from the end user's browser, mobile device, or client. It will reduce the overall search latency while offloading your servers at the same time.
 
 In your JavaScript code you can do:
 
@@ -168,17 +219,20 @@ index.search('something', function(success, hits) {
 }, { hitsPerPage: 10, page: 0 });
 ```
 
-### Backend Search
+## Backend Search
 
-You could also use the `search` method but it's not recommended to implement instant/realtime search experience:
+You could also use the `search` method but it's not recommended to implement a instant/realtime search experience from the backend (having a frontend search gives a better user experience):
 
 ```php
 Contact::search('jon doe');
 ```
 
-## Options
 
-### Auto-indexing & Asynchronism
+# Options
+
+
+
+## Auto-indexing & Asynchronism
 
 Each time a record is saved; it will be - asynchronously - indexed. On the other hand, each time a record is destroyed, it will be - asynchronously - removed from the index.
 
@@ -207,6 +261,7 @@ for ($i = 0; $i < 10000; $i++) {
 }
 
 Contact::reindex(); // Will use batch operations.
+Contact::$autoIndex = true;
 ```
 
 You can also make a dynamic condition for those two parameters creating an `autoIndex` and/or `autoDelete method`
@@ -243,7 +298,7 @@ Be careful those two methods are defined in AlgoliaEloquentTrait.
 When putting those methods in a parent class they will be "erased" by AlgoliaEloquentTrait if used in a child class
 (because of php inheritance)
 
-### Custom Index Name
+## Custom Index Name
 
 By default, the index name will be the pluralized class name, e.g. "Contacts". You can customize the index name by using the `$indices` option:
 
@@ -258,7 +313,7 @@ class Contact extends Model
 }
 ```
 
-### Per-environment Indexes
+## Per-environment Indexes
 
 You can suffix the index name with the current App environment using the following option:
 
@@ -273,7 +328,7 @@ class Contact extends Model
 }
 ```
 
-### Custom `objectID`
+## Custom `objectID`
 
 By default, the `objectID` is based on your record's `keyName` (`id` by default). You can change this behavior specifying the `objectIdKey` option (be sure to use a uniq field).
 
@@ -288,7 +343,7 @@ class Contact extends Model
 }
 ```
 
-### Restrict Indexing to a Subset of Your Data
+## Restrict Indexing to a Subset of Your Data
 
 You can add constraints controlling if a record must be indexed by defining the `indexOnly()` method.
 
@@ -306,9 +361,12 @@ class Contact extends Model
 }
 ```
 
-## Relationships
 
-### Relationships
+# Relationships
+
+
+
+## Relationships
 
 By default the Algolia package will fetch the **loaded** relationships.
 
@@ -341,17 +399,18 @@ public function getAlgoliaRecord()
     $extra_data = [];
     $extra_data['categories'] = array_map(function ($data) {
                                         return $data['name'];
-                                }, $this->categories->toArray();
+                                }, $this->categories->toArray());
 
    return array_merge($this->toArray(), $extra_data);
 }
 ```
 
 
+# Indexing
 
-## Indexing
 
-### Manual Indexing
+
+## Manual Indexing
 
 You can trigger indexing using the `pushToIndex` instance method.
 
@@ -360,7 +419,7 @@ $contact = Contact::firstOrCreate(['name' => 'Jean']);
 $contact->pushToIndex();
 ```
 
-### Manual Removal
+## Manual Removal
 
 And trigger the removing using the `removeFromIndex` instance method.
 
@@ -369,7 +428,7 @@ $contact = Contact::firstOrCreate(['name' => 'Jean']);
 $contact->removeFromIndex();
 ```
 
-### Reindexing
+## Reindexing
 
 To *safely* reindex all your records (index to a temporary index + move the temporary index to the current one atomically), use the `reindex` class method:
 
@@ -383,7 +442,31 @@ To reindex all your records (in place, without deleting out-dated records):
 Contact::reindex(false);
 ```
 
-### Clearing an Index
+To set settings during the reindexing process:
+
+```php
+Contact::reindex(true, true);
+```
+
+To keep settings that you set on the Algolia dashboard when reindexing and setting settings:
+
+```php
+Contact::reindex(true, true, true);
+```
+
+To implement a callback that gets called everytime a batch of entities is indexed:
+
+```php
+Contact::reindex(true, true, false, function ($entities)
+{
+    foreach ($entities as $entity)
+    {
+        var_dump($entity->id); // Contact::$id
+    }
+});
+```
+
+## Clearing an Index
 
 To clear an index, use the `clearIndices` class method:
 
@@ -391,11 +474,14 @@ To clear an index, use the `clearIndices` class method:
 Contact::clearIndices();
 ```
 
-## Manage indices
 
-### Master/Slave
+# Manage indices
 
-You can define slave indexes using the `$algolia_settings` variable:
+
+
+## Primary/Replica
+
+You can define replica indexes using the `$algolia_settings` variable:
 
 ```php
 use Illuminate\Database\Eloquent\Model;
@@ -405,7 +491,7 @@ class Contact extends Model
      use AlgoliaEloquentTrait;
 
      public $algoliaSettings = [
-        'attributesToIndex' => [
+        'searchableAttributes' => [
             'id',
             'name',
         ],
@@ -413,12 +499,12 @@ class Contact extends Model
             'desc(popularity)',
             'asc(name)',
         ],
-        'slaves' => [
+        'replicas' => [
             'contacts_desc',
         ],
     ];
 
-    public $slavesSettings = [
+    public $replicasSettings = [
         'contacts_desc' => [
             'ranking' => [
                 'desc(name)',
@@ -435,13 +521,13 @@ class Contact extends Model
 }
 ```
 
-To search using a slave use the following code:
+To search using a replica use the following code:
 
 ```php
 Book::search('foo bar', ['index' => 'contacts_desc']);
 ```
 
-### Target Multiple Indexes
+## Target Multiple Indexes
 
 You can index a record in several indexes using the <code>$indices</code> property:
 
@@ -474,9 +560,12 @@ To search using an extra index, use the following code:
 Book::search('foo bar', ['index' => 'contacts_private']);
 ```
 
-## Eloquent compatibility
 
-### Eloquent compatibility
+# Eloquent compatibility
+
+
+
+## Eloquent compatibility
 
 Doing :
 
@@ -493,16 +582,9 @@ To make this query work with Algolia you need to do it like that:
 Ad::find($id)->update($attributes);
 ```
 
-<!--NO_HTML-->
 ## Compatibility
-
-### Compatibility
 
 Compatible with 5.x applications
 
-## License
-### License
 
-Laravel Algolia Search is licensed under [The MIT License (MIT)](LICENSE).
 
-<!--/NO_HTML-->
