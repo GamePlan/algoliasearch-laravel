@@ -152,7 +152,16 @@ class ModelHelper
         }
 
         $indices = array_map(function ($index_name) use ($model) {
-            return $this->algolia->initIndex($this->getFinalIndexName($model, $index_name).'_tmp');
+
+            $originIndex = $this->algolia->initIndex($this->getFinalIndexName($model, $index_name));
+            $originSettings = $originIndex->getSettings();
+            //we have to unset slaves before we can clone setting to the tmp index
+            unset($originSettings['slaves']);
+
+            $index = $this->algolia->initIndex($this->getFinalIndexName($model, $index_name).'_tmp');
+            $index->setSettings($originSettings);
+
+            return $index;
         }, $indicesName);
 
         return $indices;

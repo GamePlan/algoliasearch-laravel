@@ -238,10 +238,14 @@ trait AlgoliaEloquentTrait
                 $index->setSettings($settingsWithoutSynonyms);
             }
 
-            if ($b) {
+            if ($b && isset($settings['slaves'])) {
                 $b = false;
                 unset($settings['replicas']);
                 unset($settings['slaves']); // backward compatibility
+            }
+
+            if (count(array_keys($settings)) > 0) {
+                $index->setSettings($settings);
             }
         }
 
